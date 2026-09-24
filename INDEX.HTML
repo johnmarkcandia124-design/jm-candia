@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Obby Runner - By John Mark Candia</title>
+    <style>
+        /* Clean, simple layout alignment */
+        body {
+            background-color: #191b1d;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        /* Basic Creator Tag */
+        .dev-tag {
+            color: #ffb423;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .score-box {
+            font-size: 20px;
+            color: #00b06f; /* Green score */
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        /* The basic black canvas block */
+        #gameCanvas {
+            background-color: #111214;
+            border: 2px solid #45474b;
+            border-radius: 4px;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            color: #bdc3c7;
+            font-size: 14px;
+        }
+
+        /* Basic Game Over alert screen box */
+        #gameOverScreen {
+            display: none;
+            position: absolute;
+            background: #2b2d30;
+            padding: 25px;
+            border-radius: 6px;
+            border: 2px solid #e74c3c;
+            text-align: center;
+        }
+
+        .restart-btn {
+            background-color: #0084ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dev-tag">By John Mark Candia</div>
+    <div class="title">Simple Obby Runner</div>
+    <div class="score-box">Score: <span id="scoreText">0</span></div>
+
+    <canvas id="gameCanvas" width="700" height="250"></canvas>
+
+    <div class="instructions">Press <b>SPACEBAR</b> or click the canvas window to JUMP!</div>
+
+    <div id="gameOverScreen">
+        <h2 style="color: #e74c3c; margin: 0 0 10px 0;">GAME OVER</h2>
+        <p>You hit an obstacle triangle!</p>
+        <p style="font-size: 18px; font-weight: bold;">Final Score: <span id="finalScoreText">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">Try Again</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const scoreText = document.getElementById("scoreText");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+        const finalScoreText = document.getElementById("finalScoreText");
+
+        let score = 0;
+        let isGameOver = false;
+        let obstacleTimer = 0;
+        let gameSpeed = 5;
+
+        // Player Square Box settings
+        let runner = {
+            x: 80,
+            y: 160, // Fixed baseline height line positioning
+            width: 30,
+            height: 40,
+            color: "#0084ff", // Simple blue square block player
+            velocityY: 0,
+            gravity: 0.6,
+            jumpForce: -11.5,
+            isGrounded: true
+        };
+
+        let obstacles = [];
+
+        // --- NORMAL JUMPING ACTION CONTROLS ---
+        function triggerJump() {
+            if (runner.isGrounded && !isGameOver) {
+                runner.velocityY = runner.jumpForce;
+                runner.isGrounded = false;
+            }
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space") {
+                e.preventDefault();
+                triggerJump();
+            }
+        });
+
+        canvas.addEventListener("mousedown", triggerJump);
+
+        function updateGame() {
+            if (isGameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Snapping movement vectors metrics physics engine loop
+            runner.velocityY += runner.gravity;
+            runner.y += runner.velocityY;
+
+            if (runner.y >= 160) {
+                runner.y = 160;
+                runner.velocityY = 0;
+                runner.isGrounded = true;
+            }
+
+            // 2. Render Flat Gray ground strip line floor boundary
+            ctx.fillStyle = "#3a3d40";
+            ctx.fillRect(0, 200, canvas.width, 50);
+
+            // 3. Render Player Block
+            ctx.fillStyle = runner.color;
+            ctx.fillRect(runner.x, runner.y, runner.width, runner.height);
+
+            // 4. Obstacle timeline timers generator
+            obstacleTimer++;
+            if (obstacleTimer > 90) {
+                obstacles.push({
+                    x: canvas.width,
+                    y: 170,
+                    width: 20,
+                    height: 30,
+                    color: "#e74c3c" // Danger red triangles obstacle spikes
+                });
+                obstacleTimer = 0;
+            }
+
+            // 5. Drawing layout objects elements frame blocks
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                // Simple Sharp Obstacle Triangle design
+                ctx.fillStyle = obs.color;
+                ctx.beginPath();
+                ctx.moveTo(obs.x, obs.y + obs.height);
+                ctx.lineTo(obs.x + obs.width / 2, obs.y);
+                ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                ctx.fill();
+                ctx.closePath();
+
+                // Box hitbox collision tracking logic algorithms
+                if (
+                    runner.x < obs.x + obs.width &&
+                    runner.x + runner.width > obs.x &&
+                    runner.y < obs.y + obs.height &&
+                    runner.y + runner.height > obs.y
+                ) {
+                    endGame();
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    scoreText.textContent = score;
+
+                    if (score % 5 === 0) {
+                        gameSpeed += 0.4;
+                    }
+                }
+            }
+
+            requestAnimationFrame(updateGame);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            finalScoreText.textContent = score;
+            gameOverScreen.style.display = "block";
+        }
+
+        function restartGame() {
+            score = 0;
+            gameSpeed = 5;
+            scoreText.textContent = score;
+            isGameOver = false;
+            gameOverScreen.style.display = "none";
+            obstacles = [];
+            
+            runner.y = 160;
+            runner.velocityY = 0;
+            runner.isGrounded = true;
+
+            updateGame();
+        }
+
+        updateGame();
+    </script>
+</body>
+</html>
